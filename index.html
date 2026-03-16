@@ -29,15 +29,19 @@
         const GAME_HEIGHT = 800;
         const FALL_GAMEOVER_Y = GAME_HEIGHT + 60;
 
-        // ground.png が 160x54 前提
-        const GROUND_WIDTH = 160;
+        // 表示サイズだけ約 2/3 に縮小
+        const DISPLAY_SCALE = 0.67;
 
-        // 足場全体を少し上げる
+        // ground.png の元サイズ前提
+        const GROUND_WIDTH = 160;
+        const GROUND_HEIGHT = 54;
+
+        // 足場位置
         const GROUND_Y_MIN = 430;
         const GROUND_Y_MAX = 640;
         const INITIAL_GROUND_Y = 610;
 
-        // 2段ジャンプ演出を少し見せる時間
+        // 2段ジャンプ演出
         const SECOND_JUMP_ANIM_LOCK_MS = 140;
 
         const config = {
@@ -189,9 +193,16 @@
             createAnimations.call(this);
 
             player = this.physics.add.sprite(100, 360, 'run1');
+            player.setScale(DISPLAY_SCALE);
 
-            player.body.setSize(player.width * 0.58, player.height * 0.76);
-            player.body.setOffset(player.width * 0.21, player.height * 0.20);
+            player.body.setSize(
+                player.displayWidth * 0.58,
+                player.displayHeight * 0.76
+            );
+            player.body.setOffset(
+                player.displayWidth * 0.21,
+                player.displayHeight * 0.20
+            );
 
             player.setCollideWorldBounds(false);
             player.setBounce(0);
@@ -392,15 +403,29 @@
             });
         }
 
+        function scalePickupBody(sprite, bodyScale = 0.78) {
+            sprite.setScale(DISPLAY_SCALE);
+            sprite.body.setSize(
+                sprite.displayWidth * bodyScale,
+                sprite.displayHeight * bodyScale,
+                true
+            );
+            return sprite;
+        }
+
         function createGround(x, y) {
             const g = grounds.create(x, y, 'ground');
             g.setOrigin(0.5, 0.5);
+            g.setScale(DISPLAY_SCALE);
             g.body.setAllowGravity(false);
             g.body.setImmovable(true);
             g.body.setVelocityX(-(gameSpeed * 60));
 
-            // 見た目は大きいまま、判定は少し短くして難易度を戻す
-            g.body.setSize(GROUND_WIDTH * 0.84, 54, true);
+            g.body.setSize(
+                GROUND_WIDTH * 0.84 * DISPLAY_SCALE,
+                GROUND_HEIGHT * DISPLAY_SCALE,
+                true
+            );
 
             g.body.checkCollision.down = false;
             g.body.checkCollision.left = false;
@@ -437,7 +462,6 @@
 
             const x = 680;
 
-            // 足場生成率を少し下げて gap を増やす
             if (Math.random() > 0.32) {
                 const nextY = Phaser.Math.Clamp(
                     lastGroundY + Phaser.Math.Between(-60, 55),
@@ -458,8 +482,10 @@
 
             if (st < 0.14 && (x - lastEnemyX > 115)) {
                 const enemy = enemies.create(x, h, 'bee');
+                enemy.setScale(DISPLAY_SCALE);
                 enemy.body.setAllowGravity(false);
                 enemy.body.setVelocityX(-(gameSpeed * 60));
+                enemy.body.setSize(enemy.displayWidth * 0.82, enemy.displayHeight * 0.82, true);
                 lastEnemyX = x;
             } else if (st < 0.20) {
                 const it = Math.random();
@@ -470,10 +496,12 @@
                 else if (it < 0.6) item = items.create(x, h, '035').setName('035');
                 else item = items.create(x, h, 'plant').setName('plant');
 
+                scalePickupBody(item, 0.78);
                 item.body.setAllowGravity(false);
                 item.body.setVelocityX(-(gameSpeed * 60));
             } else if (st < 0.32) {
                 const coin = coins.create(x, h, 'inmu_coin');
+                scalePickupBody(coin, 0.78);
                 coin.body.setAllowGravity(false);
                 coin.body.setVelocityX(-(gameSpeed * 60));
             }
