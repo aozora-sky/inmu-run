@@ -29,12 +29,16 @@
         const GAME_HEIGHT = 800;
         const FALL_GAMEOVER_Y = GAME_HEIGHT + 60;
 
-        // 表示サイズだけ約 2/3 に縮小
+        // 表示だけ縮小
         const DISPLAY_SCALE = 0.67;
 
-        // ground.png の元サイズ前提
+        // ground.png 元サイズ
         const GROUND_WIDTH = 160;
         const GROUND_HEIGHT = 54;
+
+        // 縮小後の見た目幅を基準に足場間隔を再設定
+        const DISPLAY_GROUND_WIDTH = GROUND_WIDTH * DISPLAY_SCALE;
+        const GROUND_SPACING = Math.round(DISPLAY_GROUND_WIDTH * 0.96);
 
         // 足場位置
         const GROUND_Y_MIN = 430;
@@ -43,6 +47,9 @@
 
         // 2段ジャンプ演出
         const SECOND_JUMP_ANIM_LOCK_MS = 140;
+
+        // ジャンプ直後の誤着地防止
+        const LAND_RESET_LOCK_MS = 130;
 
         const config = {
             type: Phaser.AUTO,
@@ -83,12 +90,14 @@
         let wasOnGroundForLanding = false;
         let currentJumpAnimType = 'up';
         let secondJumpAnimUntil = 0;
+        let lastJumpTime = 0;
 
         let rankingTexts = [];
         let rankingLoadingText = null;
         let isSubmittingRanking = false;
         let hasSubmittedRanking = false;
         let rankingRegisterButton = null;
+        let rankingRequestId = 0;
 
         function preload() {
             this.load.image('daytime', 'assets/daytime.png');
@@ -144,9 +153,13 @@
             wasOnGroundForLanding = false;
             currentJumpAnimType = 'up';
             secondJumpAnimUntil = 0;
+            lastJumpTime = 0;
             isSubmittingRanking = false;
             hasSubmittedRanking = false;
             rankingRegisterButton = null;
+
+            // 以前のランキング取得結果を無効化
+            rankingRequestId++;
 
             itemCounts = { banana: 0, budo: 0, cat035: 0, hogo: 0, shiro: 0 };
             timerBanana = null;
@@ -192,16 +205,17 @@
 
             createAnimations.call(this);
 
-            player = this.physics.add.sprite(100, 360, 'run1');
+            player = this.physics.add.sprite(95, INITIAL_GROUND_Y - 90, 'run1');
             player.setScale(DISPLAY_SCALE);
 
+            // 元画像サイズベースで判定を作る（scale 後でも安定しやすい）
             player.body.setSize(
-                player.displayWidth * 0.58,
-                player.displayHeight * 0.76
+                player.width * 0.58,
+                player.height * 0.76
             );
             player.body.setOffset(
-                player.displayWidth * 0.21,
-                player.displayHeight * 0.20
+                player.width * 0.21,
+                player.height * 0.20
             );
 
             player.setCollideWorldBounds(false);
@@ -236,8 +250,9 @@
                 loop: true
             });
 
-            for (let i = 0; i < 4; i++) {
-                createGround.call(this, i * GROUND_WIDTH, INITIAL_GROUND_Y);
+            // 初期足場は縮小後の見た目幅に合わせて詰める
+            for (let i = 0; i < 6; i++) {
+                createGround.call(this, i * GROUND_SPACING, INITIAL_GROUND_Y);
             }
 
             setPlayerState('run');
@@ -344,7 +359,13 @@
 
             const onGroundForAnimation = physicallyOnGround || groundedRecently;
 
-            if (physicallyOnGround && !wasOnGroundForLanding && body.velocity.y >= 0) {
+            // 誤着地リセット防止
+            if (
+                physicallyOnGround &&
+                !wasOnGroundForLanding &&
+                body.velocity.y >= 0 &&
+                (this.time.now - lastJumpTime) > LAND_RESET_LOCK_MS
+            ) {
                 jumpCount = 0;
                 lastGroundedTime = this.time.now;
                 currentJumpAnimType = 'up';
@@ -406,8 +427,8 @@
         function scalePickupBody(sprite, bodyScale = 0.78) {
             sprite.setScale(DISPLAY_SCALE);
             sprite.body.setSize(
-                sprite.displayWidth * bodyScale,
-                sprite.displayHeight * bodyScale,
+                sprite.width * bodyScale,
+                sprite.height * bodyScale,
                 true
             );
             return sprite;
@@ -421,9 +442,10 @@
             g.body.setImmovable(true);
             g.body.setVelocityX(-(gameSpeed * 60));
 
+            // 元サイズ基準で当たり判定を作る
             g.body.setSize(
-                GROUND_WIDTH * 0.84 * DISPLAY_SCALE,
-                GROUND_HEIGHT * DISPLAY_SCALE,
+                GROUND_WIDTH * 0.80,
+                GROUND_HEIGHT,
                 true
             );
 
@@ -444,6 +466,7 @@
                 player.setVelocityY(-550);
                 jumpCount++;
                 wasOnGroundForLanding = false;
+                lastJumpTime = this.time.now;
 
                 if (jumpCount >= 2) {
                     currentJumpAnimType = 'second';
@@ -460,11 +483,13 @@
         function spawnObstacle() {
             if (isGameOver) return;
 
-            const x = 680;
+            // 足場が届く距離に戻す
+            const x = GAME_WIDTH + DISPLAY_GROUND_WIDTH + 35;
 
-            if (Math.random() > 0.32) {
+            // 生成率を少し戻す
+            if (Math.random() > 0.24) {
                 const nextY = Phaser.Math.Clamp(
-                    lastGroundY + Phaser.Math.Between(-60, 55),
+                    lastGroundY + Phaser.Math.Between(-45, 40),
                     GROUND_Y_MIN,
                     GROUND_Y_MAX
                 );
@@ -474,8 +499,8 @@
 
             const h = Phaser.Math.RND.pick([
                 lastGroundY - 80,
-                lastGroundY - 145,
-                lastGroundY - 210
+                lastGroundY - 140,
+                lastGroundY - 195
             ]);
 
             const st = Math.random();
@@ -485,7 +510,7 @@
                 enemy.setScale(DISPLAY_SCALE);
                 enemy.body.setAllowGravity(false);
                 enemy.body.setVelocityX(-(gameSpeed * 60));
-                enemy.body.setSize(enemy.displayWidth * 0.82, enemy.displayHeight * 0.82, true);
+                enemy.body.setSize(enemy.width * 0.82, enemy.height * 0.82, true);
                 lastEnemyX = x;
             } else if (st < 0.20) {
                 const it = Math.random();
@@ -661,6 +686,8 @@
         }
 
         async function fetchRanking() {
+            const requestId = ++rankingRequestId;
+
             try {
                 clearRankingTexts();
 
@@ -669,6 +696,9 @@
                 });
 
                 const data = await res.json();
+
+                // リスタート後などの古いレスポンスは無視
+                if (!isGameOver || requestId !== rankingRequestId) return;
 
                 if (rankingLoadingText) {
                     rankingLoadingText.destroy();
@@ -694,6 +724,8 @@
                 });
 
             } catch (err) {
+                if (!isGameOver || requestId !== rankingRequestId) return;
+
                 if (rankingLoadingText) {
                     rankingLoadingText.destroy();
                     rankingLoadingText = null;
@@ -764,6 +796,8 @@
         }
 
         function addRankingLine(x, y, text, color = '#fff', fontSize = 20) {
+            if (!isGameOver) return;
+
             const t = this.add.text(x, y, text, {
                 fontSize: `${fontSize}px`,
                 fill: color
