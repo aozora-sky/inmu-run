@@ -29,26 +29,18 @@
         const GAME_HEIGHT = 800;
         const FALL_GAMEOVER_Y = GAME_HEIGHT + 60;
 
-        // 表示だけ縮小
         const DISPLAY_SCALE = 0.67;
 
-        // ground.png 元サイズ
         const GROUND_WIDTH = 160;
         const GROUND_HEIGHT = 54;
-
-        // 縮小後の見た目幅を基準に足場間隔を再設定
         const DISPLAY_GROUND_WIDTH = GROUND_WIDTH * DISPLAY_SCALE;
         const GROUND_SPACING = Math.round(DISPLAY_GROUND_WIDTH * 0.96);
 
-        // 足場位置
         const GROUND_Y_MIN = 430;
         const GROUND_Y_MAX = 640;
         const INITIAL_GROUND_Y = 610;
 
-        // 2段ジャンプ演出
         const SECOND_JUMP_ANIM_LOCK_MS = 140;
-
-        // ジャンプ直後の誤着地防止
         const LAND_RESET_LOCK_MS = 130;
 
         const config = {
@@ -105,21 +97,17 @@
             this.load.image('night', 'assets/night.png');
             this.load.image('moon', 'assets/moon.png');
 
-            // 走る
             this.load.image('run1', 'assets/run1.png');
             this.load.image('run2', 'assets/run2.png');
             this.load.image('run3', 'assets/run3.png');
             this.load.image('run4', 'assets/run4.png');
 
-            // ジャンプ上昇
             this.load.image('jump_up1', 'assets/jump_up1.png');
             this.load.image('jump_up2', 'assets/jump_up2.png');
 
-            // 2段・3段ジャンプ
             this.load.image('jump_2nd1', 'assets/jump_2nd1.png');
             this.load.image('jump_2nd2', 'assets/jump_2nd2.png');
 
-            // 下降
             this.load.image('jump_down1', 'assets/jump_down1.png');
             this.load.image('jump_down2', 'assets/jump_down2.png');
             this.load.image('jump_down3', 'assets/jump_down3.png');
@@ -158,7 +146,6 @@
             hasSubmittedRanking = false;
             rankingRegisterButton = null;
 
-            // 以前のランキング取得結果を無効化
             rankingRequestId++;
 
             itemCounts = { banana: 0, budo: 0, cat035: 0, hogo: 0, shiro: 0 };
@@ -208,7 +195,6 @@
             player = this.physics.add.sprite(95, INITIAL_GROUND_Y - 90, 'run1');
             player.setScale(DISPLAY_SCALE);
 
-            // 元画像サイズベースで判定を作る（scale 後でも安定しやすい）
             player.body.setSize(
                 player.width * 0.58,
                 player.height * 0.76
@@ -250,7 +236,6 @@
                 loop: true
             });
 
-            // 初期足場は縮小後の見た目幅に合わせて詰める
             for (let i = 0; i < 6; i++) {
                 createGround.call(this, i * GROUND_SPACING, INITIAL_GROUND_Y);
             }
@@ -359,7 +344,6 @@
 
             const onGroundForAnimation = physicallyOnGround || groundedRecently;
 
-            // 誤着地リセット防止
             if (
                 physicallyOnGround &&
                 !wasOnGroundForLanding &&
@@ -442,7 +426,6 @@
             g.body.setImmovable(true);
             g.body.setVelocityX(-(gameSpeed * 60));
 
-            // 元サイズ基準で当たり判定を作る
             g.body.setSize(
                 GROUND_WIDTH * 0.80,
                 GROUND_HEIGHT,
@@ -483,10 +466,8 @@
         function spawnObstacle() {
             if (isGameOver) return;
 
-            // 足場が届く距離に戻す
             const x = GAME_WIDTH + DISPLAY_GROUND_WIDTH + 35;
 
-            // 生成率を少し戻す
             if (Math.random() > 0.24) {
                 const nextY = Phaser.Math.Clamp(
                     lastGroundY + Phaser.Math.Between(-45, 40),
@@ -697,7 +678,6 @@
 
                 const data = await res.json();
 
-                // リスタート後などの古いレスポンスは無視
                 if (!isGameOver || requestId !== rankingRequestId) return;
 
                 if (rankingLoadingText) {
@@ -748,7 +728,8 @@
             isSubmittingRanking = true;
 
             try {
-                const payload = {
+                const params = new URLSearchParams({
+                    action: 'submit',
                     name: name,
                     score: Math.floor(fScore),
                     banana: itemCounts.banana,
@@ -756,14 +737,10 @@
                     cat035: itemCounts.cat035,
                     hogo: itemCounts.hogo,
                     shiro: itemCounts.shiro
-                };
+                });
 
-                const res = await fetch(RANKING_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'text/plain;charset=utf-8'
-                    },
-                    body: JSON.stringify(payload)
+                const res = await fetch(`${RANKING_API_URL}?${params.toString()}`, {
+                    method: 'GET'
                 });
 
                 const data = await res.json();
@@ -818,7 +795,7 @@
             const itemsStr = `🍌x${itemCounts.banana} 🍇x${itemCounts.budo} 035x${itemCounts.cat035} 🌿x${itemCounts.hogo} 🪙x${itemCounts.shiro}`;
 
             const text = encodeURIComponent(
-                `$SHIRO cat runで${totalScore}m走破しました！
+                `$INMU runで${totalScore}m走破しました！
 Item ${itemsStr}
 
 TOTAL Score ${totalScore}m
@@ -826,7 +803,7 @@ TOTAL Score ${totalScore}m
 ゲームプレイはこちらから
 ${SERVER_URL}
 
-#ShiroCatRun $SHIRO #035HP`
+#InmuRun $INMU #035HP`
             );
 
             window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
