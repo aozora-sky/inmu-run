@@ -31,8 +31,14 @@
 
         // ground.png が 160x54 前提
         const GROUND_WIDTH = 160;
-        const GROUND_Y_MIN = 500;
-        const GROUND_Y_MAX = 750;
+
+        // 足場全体を少し上げる
+        const GROUND_Y_MIN = 430;
+        const GROUND_Y_MAX = 640;
+        const INITIAL_GROUND_Y = 610;
+
+        // 2段ジャンプ演出を少し見せる時間
+        const SECOND_JUMP_ANIM_LOCK_MS = 140;
 
         const config = {
             type: Phaser.AUTO,
@@ -60,7 +66,7 @@
         let jumpCount = 0, maxJumps = 2;
         let isInvincible = false, scoreMultiplier = 1;
         let scoreText, scoreTimer;
-        let lastGroundY = 700, lastEnemyX = 0, isGameOver = false;
+        let lastGroundY = INITIAL_GROUND_Y, lastEnemyX = 0, isGameOver = false;
         let bgm, seGameOver;
         let itemCounts = { banana: 0, budo: 0, cat035: 0, hogo: 0, shiro: 0 };
         let playCount = parseInt(localStorage.getItem('shiro_play_count') || '0', 10);
@@ -72,6 +78,7 @@
         let lastGroundedTime = 0;
         let wasOnGroundForLanding = false;
         let currentJumpAnimType = 'up';
+        let secondJumpAnimUntil = 0;
 
         let rankingTexts = [];
         let rankingLoadingText = null;
@@ -124,7 +131,7 @@
             maxJumps = 2;
             isInvincible = false;
             scoreMultiplier = 1;
-            lastGroundY = 700;
+            lastGroundY = INITIAL_GROUND_Y;
             lastEnemyX = 0;
             isGameOver = false;
             currentBgKey = 'daytime';
@@ -132,6 +139,7 @@
             lastGroundedTime = 0;
             wasOnGroundForLanding = false;
             currentJumpAnimType = 'up';
+            secondJumpAnimUntil = 0;
             isSubmittingRanking = false;
             hasSubmittedRanking = false;
             rankingRegisterButton = null;
@@ -180,9 +188,8 @@
 
             createAnimations.call(this);
 
-            player = this.physics.add.sprite(100, 400, 'run1');
+            player = this.physics.add.sprite(100, 360, 'run1');
 
-            // 80x80前後の見た目を想定して少し大きめ画像用に調整
             player.body.setSize(player.width * 0.58, player.height * 0.76);
             player.body.setOffset(player.width * 0.21, player.height * 0.20);
 
@@ -218,8 +225,8 @@
                 loop: true
             });
 
-            for (let i = 0; i < 5; i++) {
-                createGround.call(this, i * GROUND_WIDTH, 700);
+            for (let i = 0; i < 4; i++) {
+                createGround.call(this, i * GROUND_WIDTH, INITIAL_GROUND_Y);
             }
 
             setPlayerState('run');
@@ -261,8 +268,8 @@
                         { key: 'jump_2nd1' },
                         { key: 'jump_2nd2' }
                     ],
-                    frameRate: 12,
-                    repeat: 0
+                    frameRate: 18,
+                    repeat: 1
                 });
             }
 
@@ -305,7 +312,7 @@
 
             const worldSpeed = -(gameSpeed * 60);
 
-            setGroupVelocityAndCleanup(grounds, worldSpeed, -220);
+            setGroupVelocityAndCleanup(grounds, worldSpeed, -240);
             setGroupVelocityAndCleanup(enemies, worldSpeed, -150);
             setGroupVelocityAndCleanup(items, worldSpeed, -150);
             setGroupVelocityAndCleanup(coins, worldSpeed, -150);
@@ -329,6 +336,8 @@
             if (physicallyOnGround && !wasOnGroundForLanding && body.velocity.y >= 0) {
                 jumpCount = 0;
                 lastGroundedTime = this.time.now;
+                currentJumpAnimType = 'up';
+                secondJumpAnimUntil = 0;
             }
 
             wasOnGroundForLanding = physicallyOnGround;
@@ -336,7 +345,13 @@
             if (onGroundForAnimation) {
                 setPlayerState('run');
             } else {
-                if (body.velocity.y < -20) {
+                const secondJumpLocked =
+                    currentJumpAnimType === 'second' &&
+                    this.time.now < secondJumpAnimUntil;
+
+                if (secondJumpLocked) {
+                    setPlayerState('jump_2nd');
+                } else if (body.velocity.y < -20) {
                     if (currentJumpAnimType === 'second') {
                         setPlayerState('jump_2nd');
                     } else {
@@ -383,6 +398,10 @@
             g.body.setAllowGravity(false);
             g.body.setImmovable(true);
             g.body.setVelocityX(-(gameSpeed * 60));
+
+            // 見た目は大きいまま、判定は少し短くして難易度を戻す
+            g.body.setSize(GROUND_WIDTH * 0.84, 54, true);
+
             g.body.checkCollision.down = false;
             g.body.checkCollision.left = false;
             g.body.checkCollision.right = false;
@@ -403,9 +422,11 @@
 
                 if (jumpCount >= 2) {
                     currentJumpAnimType = 'second';
+                    secondJumpAnimUntil = this.time.now + SECOND_JUMP_ANIM_LOCK_MS;
                     setPlayerState('jump_2nd');
                 } else {
                     currentJumpAnimType = 'up';
+                    secondJumpAnimUntil = 0;
                     setPlayerState('jump_up');
                 }
             }
@@ -414,11 +435,12 @@
         function spawnObstacle() {
             if (isGameOver) return;
 
-            const x = 620;
+            const x = 680;
 
-            if (Math.random() > 0.19) {
+            // 足場生成率を少し下げて gap を増やす
+            if (Math.random() > 0.32) {
                 const nextY = Phaser.Math.Clamp(
-                    lastGroundY + Phaser.Math.Between(-40, 40),
+                    lastGroundY + Phaser.Math.Between(-60, 55),
                     GROUND_Y_MIN,
                     GROUND_Y_MAX
                 );
@@ -427,19 +449,19 @@
             }
 
             const h = Phaser.Math.RND.pick([
-                lastGroundY - 70,
-                lastGroundY - 130,
-                lastGroundY - 190
+                lastGroundY - 80,
+                lastGroundY - 145,
+                lastGroundY - 210
             ]);
 
             const st = Math.random();
 
-            if (st < 0.12 && (x - lastEnemyX > 100)) {
+            if (st < 0.14 && (x - lastEnemyX > 115)) {
                 const enemy = enemies.create(x, h, 'bee');
                 enemy.body.setAllowGravity(false);
                 enemy.body.setVelocityX(-(gameSpeed * 60));
                 lastEnemyX = x;
-            } else if (st < 0.17) {
+            } else if (st < 0.20) {
                 const it = Math.random();
                 let item;
 
@@ -450,7 +472,7 @@
 
                 item.body.setAllowGravity(false);
                 item.body.setVelocityX(-(gameSpeed * 60));
-            } else if (st < 0.30) {
+            } else if (st < 0.32) {
                 const coin = coins.create(x, h, 'inmu_coin');
                 coin.body.setAllowGravity(false);
                 coin.body.setVelocityX(-(gameSpeed * 60));
