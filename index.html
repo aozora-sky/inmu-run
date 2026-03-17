@@ -93,7 +93,6 @@
         let gameMode = 'title';
         let titleUI = [];
         let gameOverUI = [];
-        let resultScoreLabelText = null;
         let resultScoreText = null;
         let resultItemText = null;
 
@@ -404,7 +403,6 @@
                 if (obj) obj.destroy();
             });
             gameOverUI = [];
-            resultScoreLabelText = null;
             resultScoreText = null;
             resultItemText = null;
         }
@@ -723,23 +721,15 @@
                 .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
                 .setDepth(2000);
 
-            resultScoreLabelText = this.add.text(225, 120, 'TOTAL SCORE', {
-                fontSize: '20px',
+            resultScoreText = this.add.text(225, 148, `TOTAL SCORE ${formatScore(finalScore)}`, {
+                fontSize: '26px',
                 fill: '#fff3c4',
                 stroke: '#000000',
                 strokeThickness: 5,
                 fontStyle: 'bold'
             }).setOrigin(0.5).setDepth(2001);
 
-            resultScoreText = this.add.text(225, 154, formatScore(finalScore), {
-                fontSize: '32px',
-                fill: '#fff3c4',
-                stroke: '#000000',
-                strokeThickness: 5,
-                fontStyle: 'bold'
-            }).setOrigin(0.5).setDepth(2001);
-
-            resultItemText = this.add.text(225, 195, `🍌x${itemCounts.banana}  🍇x${itemCounts.budo}  035x${itemCounts.cat035}  🌿x${itemCounts.hogo}  🪙x${itemCounts.shiro}`, {
+            resultItemText = this.add.text(225, 194, `🍌x${itemCounts.banana}  🍇x${itemCounts.budo}  035x${itemCounts.cat035}  🌿x${itemCounts.hogo}  🪙x${itemCounts.shiro}`, {
                 fontSize: '16px',
                 fill: '#ffff00',
                 stroke: '#000000',
@@ -766,13 +756,13 @@
 
             rankingRegisterButton = registerHit;
 
-            const xShareHit = this.add.rectangle(225, 575, 230, 42, 0xffffff, 0.001)
+            const xShareHit = this.add.rectangle(225, 568, 230, 42, 0xffffff, 0.001)
                 .setInteractive()
                 .setDepth(2002);
 
             xShareHit.on('pointerdown', () => shareToX(finalScore));
 
-            const titleHit = this.add.rectangle(225, 660, 220, 40, 0xffffff, 0.001)
+            const titleHit = this.add.rectangle(225, 648, 220, 40, 0xffffff, 0.001)
                 .setInteractive()
                 .setDepth(2002);
 
@@ -780,7 +770,6 @@
 
             gameOverUI.push(
                 resultBg,
-                resultScoreLabelText,
                 resultScoreText,
                 resultItemText,
                 registerHit,
