@@ -721,7 +721,7 @@
                 .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
                 .setDepth(2000);
 
-            resultScoreText = this.add.text(225, 148, `TOTAL SCORE ${formatScore(finalScore)}`, {
+            resultScoreText = this.add.text(225, 158, `TOTAL SCORE ${formatScore(finalScore)}`, {
                 fontSize: '26px',
                 fill: '#fff3c4',
                 stroke: '#000000',
@@ -729,7 +729,7 @@
                 fontStyle: 'bold'
             }).setOrigin(0.5).setDepth(2001);
 
-            resultItemText = this.add.text(225, 194, `🍌x${itemCounts.banana}  🍇x${itemCounts.budo}  035x${itemCounts.cat035}  🌿x${itemCounts.hogo}  🪙x${itemCounts.shiro}`, {
+            resultItemText = this.add.text(225, 204, `🍌x${itemCounts.banana}  🍇x${itemCounts.budo}  035x${itemCounts.cat035}  🌿x${itemCounts.hogo}  🪙x${itemCounts.shiro}`, {
                 fontSize: '16px',
                 fill: '#ffff00',
                 stroke: '#000000',
@@ -762,7 +762,7 @@
 
             xShareHit.on('pointerdown', () => shareToX(finalScore));
 
-            const titleHit = this.add.rectangle(225, 648, 220, 40, 0xffffff, 0.001)
+            const titleHit = this.add.rectangle(225, 628, 220, 40, 0xffffff, 0.001)
                 .setInteractive()
                 .setDepth(2002);
 
