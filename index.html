@@ -921,7 +921,7 @@
         async function registerRanking(fScore) {
             if (isSubmittingRanking || hasSubmittedRanking) return;
 
-            const nameInput = prompt("ユーザーネームを入力してください", "Player");
+            const nameInput = prompt("ユーザーネーム（Xアカウント名）を入力してください", "Player");
             if (!nameInput) return;
 
             const name = String(nameInput).trim().slice(0, 20);
