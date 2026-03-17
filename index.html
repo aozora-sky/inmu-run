@@ -736,7 +736,7 @@
                 strokeThickness: 4
             }).setOrigin(0.5).setDepth(2001);
 
-            rankingLoadingText = this.add.text(225, 280, 'ランキング読込中...', {
+            rankingLoadingText = this.add.text(225, 285, 'ランキング読込中...', {
                 fontSize: '16px',
                 fill: '#ffffff',
                 stroke: '#000000',
@@ -756,13 +756,13 @@
 
             rankingRegisterButton = registerHit;
 
-            const xShareHit = this.add.rectangle(225, 568, 230, 42, 0xffffff, 0.001)
+            const xShareHit = this.add.rectangle(225, 558, 220, 40, 0xffffff, 0.001)
                 .setInteractive()
                 .setDepth(2002);
 
             xShareHit.on('pointerdown', () => shareToX(finalScore));
 
-            const titleHit = this.add.rectangle(225, 628, 220, 40, 0xffffff, 0.001)
+            const titleHit = this.add.rectangle(225, 623, 220, 40, 0xffffff, 0.001)
                 .setInteractive()
                 .setDepth(2002);
 
