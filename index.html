@@ -93,9 +93,12 @@
         let gameMode = 'title';
         let titleUI = [];
         let gameOverUI = [];
+        let resultScoreText = null;
+        let resultItemText = null;
 
         function preload() {
             this.load.image('title', 'assets/title.png');
+            this.load.image('result', 'assets/result.png');
 
             this.load.image('daytime', 'assets/daytime.png');
             this.load.image('sunset', 'assets/sunset.png');
@@ -185,7 +188,7 @@
             this.physics.add.overlap(player, items, collectItem, null, this);
             this.physics.add.overlap(player, coins, collectCoin, null, this);
 
-            this.input.on('pointerdown', () => {
+            this.input.on('pointerdown', (pointer) => {
                 if (gameMode === 'title') {
                     startGame.call(this);
                 } else if (gameMode === 'playing') {
@@ -385,14 +388,7 @@
                 .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
                 .setDepth(3000);
 
-            const tapText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 80, 'Tap to Start', {
-                fontSize: '28px',
-                fill: '#ffffff',
-                stroke: '#000000',
-                strokeThickness: 6
-            }).setOrigin(0.5).setDepth(3001);
-
-            titleUI.push(titleBg, tapText);
+            titleUI.push(titleBg);
         }
 
         function clearTitleUI() {
@@ -407,6 +403,8 @@
                 if (obj) obj.destroy();
             });
             gameOverUI = [];
+            resultScoreText = null;
+            resultItemText = null;
         }
 
         function update() {
@@ -719,88 +717,66 @@
 
             const finalScore = Math.floor(score + bonusScore);
 
-            const overlay = this.add.rectangle(225, 400, 450, 800, 0x000000, 0.9).setDepth(2000);
-            const goText = this.add.text(225, 60, 'GAME OVER', {
-                fontSize: '40px',
-                fill: '#f00',
-                fontWeight: 'bold'
+            const resultBg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'result')
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setDepth(2000);
+
+            // 画像に合わせた表示位置
+            resultScoreText = this.add.text(225, 130, formatScore(finalScore), {
+                fontSize: '32px',
+                fill: '#fff3c4',
+                stroke: '#000000',
+                strokeThickness: 5,
+                fontStyle: 'bold'
             }).setOrigin(0.5).setDepth(2001);
 
-            const scoreLine = this.add.text(225, 120, `TOTAL SCORE ${formatScore(finalScore)}`, {
-                fontSize: '28px',
-                fill: '#fff'
+            resultItemText = this.add.text(225, 175, `🍌x${itemCounts.banana}  🍇x${itemCounts.budo}  035x${itemCounts.cat035}  🌿x${itemCounts.hogo}  🪙x${itemCounts.shiro}`, {
+                fontSize: '16px',
+                fill: '#ffff00',
+                stroke: '#000000',
+                strokeThickness: 4
             }).setOrigin(0.5).setDepth(2001);
 
-            const itemText = this.add.text(225, 160, `🍌x${itemCounts.banana} 🍇x${itemCounts.budo} 035x${itemCounts.cat035} 🌿x${itemCounts.hogo} 🪙x${itemCounts.shiro}`, {
+            rankingLoadingText = this.add.text(225, 286, 'ランキング読込中...', {
                 fontSize: '18px',
-                fill: '#ffff00'
-            }).setOrigin(0.5).setDepth(2001);
-
-            const rankingTitle = this.add.text(225, 220, 'ーー TOP RANKING ーー', {
-                fontSize: '18px',
-                fill: '#aaa'
-            }).setOrigin(0.5).setDepth(2001);
-
-            rankingLoadingText = this.add.text(225, 260, 'ランキング読込中...', {
-                fontSize: '20px',
-                fill: '#fff'
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
             }).setOrigin(0.5).setDepth(2001);
 
             fetchRanking.call(this);
 
-            const btnStyle = {
-                fontSize: '20px',
-                fill: '#000',
-                backgroundColor: '#fff',
-                padding: { x: 20, y: 10 }
-            };
-
-            rankingRegisterButton = this.add.text(225, 520, 'ランキングに登録する', btnStyle)
-                .setOrigin(0.5)
+            // 透明タップ領域
+            const registerHit = this.add.rectangle(225, 516, 230, 42, 0xffffff, 0.001)
                 .setInteractive()
-                .setDepth(2001);
+                .setDepth(2002);
 
-            rankingRegisterButton.on('pointerdown', async () => {
+            registerHit.on('pointerdown', async () => {
                 if (isSubmittingRanking || hasSubmittedRanking) return;
                 await registerRanking.call(this, finalScore);
             });
 
-            const xBtn = this.add.text(225, 590, 'X (Twitter) で共有', {
-                ...btnStyle,
-                backgroundColor: '#1DA1F2',
-                fill: '#fff'
-            })
-                .setOrigin(0.5)
+            rankingRegisterButton = registerHit;
+
+            const xShareHit = this.add.rectangle(225, 582, 230, 42, 0xffffff, 0.001)
                 .setInteractive()
-                .setDepth(2001);
+                .setDepth(2002);
 
-            xBtn.on('pointerdown', () => shareToX(finalScore));
+            xShareHit.on('pointerdown', () => shareToX(finalScore));
 
-            const titleBtn = this.add.text(225, 700, 'Tap to Title', {
-                fontSize: '24px',
-                fill: '#ffff00'
-            })
-                .setOrigin(0.5)
+            const titleHit = this.add.rectangle(225, 672, 220, 40, 0xffffff, 0.001)
                 .setInteractive()
-                .setDepth(2001);
+                .setDepth(2002);
 
-            titleBtn.on('pointerdown', () => showTitleScreen.call(this));
-
-            const credit = this.add.text(225, 740, 'Produced by aoba724（あおぞら）', {
-                fontSize: '14px',
-                fill: '#ffffff'
-            }).setOrigin(0.5).setDepth(2001);
+            titleHit.on('pointerdown', () => showTitleScreen.call(this));
 
             gameOverUI.push(
-                overlay,
-                goText,
-                scoreLine,
-                itemText,
-                rankingTitle,
-                rankingRegisterButton,
-                xBtn,
-                titleBtn,
-                credit
+                resultBg,
+                resultScoreText,
+                resultItemText,
+                registerHit,
+                xShareHit,
+                titleHit
             );
         }
 
@@ -824,21 +800,28 @@
                 }
 
                 if (!data.ok) {
-                    addRankingLine.call(this, 225, 260, 'ランキング取得失敗', '#ff8080');
+                    addRankingLine.call(this, 225, 286, 'ランキング取得失敗', '#ff8080');
                     return;
                 }
 
                 const ranking = Array.isArray(data.ranking) ? data.ranking.slice(0, 10) : [];
 
                 if (ranking.length === 0) {
-                    addRankingLine.call(this, 225, 260, 'まだランキングはありません', '#ffffff');
+                    addRankingLine.call(this, 225, 286, 'まだランキングはありません', '#ffffff');
                     return;
                 }
 
                 ranking.forEach((item, i) => {
                     const safeName = String(item.name || 'Player').slice(0, 12);
                     const safeScore = Number(item.score || 0);
-                    addRankingLine.call(this, 225, 260 + (i * 24), `${i + 1}. ${safeName} - ${formatScore(safeScore)}`, '#ffffff', 18);
+                    addRankingLine.call(
+                        this,
+                        225,
+                        286 + (i * 24),
+                        `${i + 1}. ${safeName} - ${formatScore(safeScore)}`,
+                        '#ffffff',
+                        18
+                    );
                 });
 
             } catch (err) {
@@ -849,7 +832,7 @@
                     rankingLoadingText = null;
                 }
                 clearRankingTexts();
-                addRankingLine.call(this, 225, 260, 'ランキング通信エラー', '#ff8080');
+                addRankingLine.call(this, 225, 286, 'ランキング通信エラー', '#ff8080');
                 console.error('fetchRanking error:', err);
             }
         }
@@ -887,16 +870,19 @@
                     hasSubmittedRanking = true;
 
                     if (rankingRegisterButton) {
-                        rankingRegisterButton.destroy();
-                        rankingRegisterButton = null;
+                        rankingRegisterButton.disableInteractive();
                     }
 
                     alert("ランキングに送信しました！");
 
-                    rankingLoadingText = this.add.text(225, 260, 'ランキング更新中...', {
-                        fontSize: '20px',
-                        fill: '#fff'
+                    rankingLoadingText = this.add.text(225, 286, 'ランキング更新中...', {
+                        fontSize: '18px',
+                        fill: '#ffffff',
+                        stroke: '#000000',
+                        strokeThickness: 4
                     }).setOrigin(0.5).setDepth(2001);
+
+                    gameOverUI.push(rankingLoadingText);
 
                     await fetchRanking.call(this);
                 } else {
@@ -915,7 +901,9 @@
 
             const t = this.add.text(x, y, text, {
                 fontSize: `${fontSize}px`,
-                fill: color
+                fill: color,
+                stroke: '#000000',
+                strokeThickness: 4
             }).setOrigin(0.5).setDepth(2001);
 
             rankingTexts.push(t);
