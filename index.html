@@ -68,14 +68,13 @@
         let score = 0, bonusScore = 0, gameSpeed = 5;
         let jumpCount = 0, maxJumps = 2;
         let isInvincible = false, scoreMultiplier = 1;
-        let scoreText, scoreTimer;
+        let scoreText, scoreTimer, spawnTimer;
         let lastGroundY = INITIAL_GROUND_Y, lastEnemyX = 0, isGameOver = false;
         let bgm, seGameOver;
         let itemCounts = { banana: 0, budo: 0, cat035: 0, hogo: 0, shiro: 0 };
         let playCount = parseInt(localStorage.getItem('shiro_play_count') || '0', 10);
         let currentBgKey = 'daytime';
         let timerBanana = null, timerBudo = null, timer035 = null;
-        let spawnTimer = null;
 
         let playerState = 'idle';
         let lastGroundedTime = 0;
@@ -91,7 +90,13 @@
         let rankingRegisterButton = null;
         let rankingRequestId = 0;
 
+        let gameMode = 'title';
+        let titleUI = [];
+        let gameOverUI = [];
+
         function preload() {
+            this.load.image('title', 'assets/title.png');
+
             this.load.image('daytime', 'assets/daytime.png');
             this.load.image('sunset', 'assets/sunset.png');
             this.load.image('night', 'assets/night.png');
@@ -125,44 +130,6 @@
         }
 
         function create() {
-            score = 0;
-            bonusScore = 0;
-            gameSpeed = 5;
-            jumpCount = 0;
-            maxJumps = 2;
-            isInvincible = false;
-            scoreMultiplier = 1;
-            lastGroundY = INITIAL_GROUND_Y;
-            lastEnemyX = 0;
-            isGameOver = false;
-            currentBgKey = 'daytime';
-            playerState = 'idle';
-            lastGroundedTime = 0;
-            wasOnGroundForLanding = false;
-            currentJumpAnimType = 'up';
-            secondJumpAnimUntil = 0;
-            lastJumpTime = 0;
-            isSubmittingRanking = false;
-            hasSubmittedRanking = false;
-            rankingRegisterButton = null;
-
-            rankingRequestId++;
-
-            itemCounts = { banana: 0, budo: 0, cat035: 0, hogo: 0, shiro: 0 };
-            timerBanana = null;
-            timerBudo = null;
-            timer035 = null;
-
-            rankingTexts.forEach(text => text.destroy());
-            rankingTexts = [];
-            if (rankingLoadingText) {
-                rankingLoadingText.destroy();
-                rankingLoadingText = null;
-            }
-
-            playCount++;
-            localStorage.setItem('shiro_play_count', playCount);
-
             this.physics.world.TILE_BIAS = 40;
             this.physics.world.setBounds(0, 0, GAME_WIDTH, GAME_HEIGHT + 1000);
 
@@ -194,7 +161,6 @@
 
             player = this.physics.add.sprite(95, INITIAL_GROUND_Y - 90, 'run1');
             player.setScale(DISPLAY_SCALE);
-
             player.body.setSize(
                 player.width * 0.58,
                 player.height * 0.76
@@ -203,7 +169,6 @@
                 player.width * 0.21,
                 player.height * 0.20
             );
-
             player.setCollideWorldBounds(false);
             player.setBounce(0);
             player.setMaxVelocity(1000, 1400);
@@ -220,29 +185,15 @@
             this.physics.add.overlap(player, items, collectItem, null, this);
             this.physics.add.overlap(player, coins, collectCoin, null, this);
 
-            scoreTimer = this.time.addEvent({
-                delay: 100,
-                callback: () => {
-                    score += (1 * scoreMultiplier);
-                },
-                callbackScope: this,
-                loop: true
+            this.input.on('pointerdown', () => {
+                if (gameMode === 'title') {
+                    startGame.call(this);
+                } else if (gameMode === 'playing') {
+                    jump.call(this);
+                }
             });
 
-            spawnTimer = this.time.addEvent({
-                delay: 350,
-                callback: spawnObstacle,
-                callbackScope: this,
-                loop: true
-            });
-
-            for (let i = 0; i < 6; i++) {
-                createGround.call(this, i * GROUND_SPACING, INITIAL_GROUND_Y);
-            }
-
-            setPlayerState('run');
-
-            this.input.on('pointerdown', jump, this);
+            showTitleScreen.call(this);
         }
 
         function createAnimations() {
@@ -298,8 +249,168 @@
             }
         }
 
+        function startGame() {
+            clearTitleUI();
+            clearGameOverUI();
+            clearRankingTexts();
+
+            if (rankingLoadingText) {
+                rankingLoadingText.destroy();
+                rankingLoadingText = null;
+            }
+
+            rankingRequestId++;
+
+            score = 0;
+            bonusScore = 0;
+            gameSpeed = 5;
+            jumpCount = 0;
+            maxJumps = 2;
+            isInvincible = false;
+            scoreMultiplier = 1;
+            lastGroundY = INITIAL_GROUND_Y;
+            lastEnemyX = 0;
+            isGameOver = false;
+            currentBgKey = 'daytime';
+            playerState = 'idle';
+            lastGroundedTime = 0;
+            wasOnGroundForLanding = false;
+            currentJumpAnimType = 'up';
+            secondJumpAnimUntil = 0;
+            lastJumpTime = 0;
+            isSubmittingRanking = false;
+            hasSubmittedRanking = false;
+            rankingRegisterButton = null;
+
+            itemCounts = { banana: 0, budo: 0, cat035: 0, hogo: 0, shiro: 0 };
+            timerBanana = null;
+            timerBudo = null;
+            timer035 = null;
+
+            grounds.clear(true, true);
+            enemies.clear(true, true);
+            items.clear(true, true);
+            coins.clear(true, true);
+
+            playCount++;
+            localStorage.setItem('shiro_play_count', playCount);
+
+            this.backGround.setTexture('daytime');
+            player.setPosition(95, INITIAL_GROUND_Y - 90);
+            player.setVelocity(0, 0);
+            player.setAlpha(1);
+            player.clearTint();
+            player.setVisible(true);
+            scoreText.setVisible(true);
+            scoreText.setText(`Score: ${formatScore(0)}`);
+
+            for (let i = 0; i < 6; i++) {
+                createGround.call(this, i * GROUND_SPACING, INITIAL_GROUND_Y);
+            }
+
+            if (scoreTimer) scoreTimer.remove(false);
+            if (spawnTimer) spawnTimer.remove(false);
+
+            scoreTimer = this.time.addEvent({
+                delay: 100,
+                callback: () => {
+                    score += (1 * scoreMultiplier);
+                },
+                callbackScope: this,
+                loop: true
+            });
+
+            spawnTimer = this.time.addEvent({
+                delay: 350,
+                callback: spawnObstacle,
+                callbackScope: this,
+                loop: true
+            });
+
+            setPlayerState('run');
+            this.physics.resume();
+            gameMode = 'playing';
+        }
+
+        function showTitleScreen() {
+            gameMode = 'title';
+            isGameOver = false;
+
+            if (scoreTimer) {
+                scoreTimer.remove(false);
+                scoreTimer = null;
+            }
+            if (spawnTimer) {
+                spawnTimer.remove(false);
+                spawnTimer = null;
+            }
+            if (timerBanana) {
+                timerBanana.remove(false);
+                timerBanana = null;
+            }
+            if (timerBudo) {
+                timerBudo.remove(false);
+                timerBudo = null;
+            }
+            if (timer035) {
+                timer035.remove(false);
+                timer035 = null;
+            }
+
+            rankingRequestId++;
+
+            grounds.clear(true, true);
+            enemies.clear(true, true);
+            items.clear(true, true);
+            coins.clear(true, true);
+
+            clearGameOverUI();
+            clearRankingTexts();
+
+            if (rankingLoadingText) {
+                rankingLoadingText.destroy();
+                rankingLoadingText = null;
+            }
+
+            if (bgm && bgm.isPlaying) {
+                bgm.stop();
+            }
+
+            this.physics.pause();
+
+            player.setVisible(false);
+            scoreText.setVisible(false);
+
+            const titleBg = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2, 'title')
+                .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
+                .setDepth(3000);
+
+            const tapText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT - 80, 'Tap to Start', {
+                fontSize: '28px',
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 6
+            }).setOrigin(0.5).setDepth(3001);
+
+            titleUI.push(titleBg, tapText);
+        }
+
+        function clearTitleUI() {
+            titleUI.forEach(obj => {
+                if (obj) obj.destroy();
+            });
+            titleUI = [];
+        }
+
+        function clearGameOverUI() {
+            gameOverUI.forEach(obj => {
+                if (obj) obj.destroy();
+            });
+            gameOverUI = [];
+        }
+
         function update() {
-            if (isGameOver) return;
+            if (gameMode !== 'playing' || isGameOver) return;
 
             const totalScore = score + bonusScore;
             let nextKey = currentBgKey;
@@ -379,7 +490,7 @@
             }
 
             scoreText.setText(
-                `Score: ${Math.floor(totalScore)}m\n${scoreMultiplier > 1 ? '!! DOUBLE SCORE !!' : ''}`
+                `Score: ${formatScore(totalScore)}\n${scoreMultiplier > 1 ? '!! DOUBLE SCORE !!' : ''}`
             );
         }
 
@@ -439,7 +550,7 @@
         }
 
         function jump() {
-            if (isGameOver) return;
+            if (gameMode !== 'playing' || isGameOver) return;
 
             if (bgm && !bgm.isPlaying) {
                 bgm.play();
@@ -464,7 +575,7 @@
         }
 
         function spawnObstacle() {
-            if (isGameOver) return;
+            if (gameMode !== 'playing' || isGameOver) return;
 
             const x = GAME_WIDTH + DISPLAY_GROUND_WIDTH + 35;
 
@@ -571,8 +682,9 @@
         }
 
         async function gameOver() {
-            if (isGameOver) return;
+            if (isGameOver || gameMode !== 'playing') return;
             isGameOver = true;
+            gameMode = 'gameover';
 
             this.physics.pause();
 
@@ -581,36 +693,50 @@
                 player.anims.stop();
             }
 
-            if (scoreTimer) scoreTimer.remove(false);
-            if (spawnTimer) spawnTimer.remove(false);
-            if (timerBanana) timerBanana.remove(false);
-            if (timerBudo) timerBudo.remove(false);
-            if (timer035) timer035.remove(false);
+            if (scoreTimer) {
+                scoreTimer.remove(false);
+                scoreTimer = null;
+            }
+            if (spawnTimer) {
+                spawnTimer.remove(false);
+                spawnTimer = null;
+            }
+            if (timerBanana) {
+                timerBanana.remove(false);
+                timerBanana = null;
+            }
+            if (timerBudo) {
+                timerBudo.remove(false);
+                timerBudo = null;
+            }
+            if (timer035) {
+                timer035.remove(false);
+                timer035 = null;
+            }
 
             if (bgm && bgm.isPlaying) bgm.stop();
             if (seGameOver) seGameOver.play();
 
             const finalScore = Math.floor(score + bonusScore);
 
-            this.add.rectangle(225, 400, 450, 800, 0x000000, 0.9).setDepth(2000);
-            this.add.text(225, 60, 'GAME OVER', {
+            const overlay = this.add.rectangle(225, 400, 450, 800, 0x000000, 0.9).setDepth(2000);
+            const goText = this.add.text(225, 60, 'GAME OVER', {
                 fontSize: '40px',
                 fill: '#f00',
                 fontWeight: 'bold'
             }).setOrigin(0.5).setDepth(2001);
 
-            this.add.text(225, 120, `走破距離 ${finalScore}m`, {
+            const scoreLine = this.add.text(225, 120, `TOTAL SCORE ${formatScore(finalScore)}`, {
                 fontSize: '28px',
                 fill: '#fff'
             }).setOrigin(0.5).setDepth(2001);
 
-            const itemText = `🍌x${itemCounts.banana} 🍇x${itemCounts.budo} 035x${itemCounts.cat035} 🌿x${itemCounts.hogo} 🪙x${itemCounts.shiro}`;
-            this.add.text(225, 160, itemText, {
+            const itemText = this.add.text(225, 160, `🍌x${itemCounts.banana} 🍇x${itemCounts.budo} 035x${itemCounts.cat035} 🌿x${itemCounts.hogo} 🪙x${itemCounts.shiro}`, {
                 fontSize: '18px',
                 fill: '#ffff00'
             }).setOrigin(0.5).setDepth(2001);
 
-            this.add.text(225, 220, 'ーー TOP RANKING ーー', {
+            const rankingTitle = this.add.text(225, 220, 'ーー TOP RANKING ーー', {
                 fontSize: '18px',
                 fill: '#aaa'
             }).setOrigin(0.5).setDepth(2001);
@@ -650,7 +776,7 @@
 
             xBtn.on('pointerdown', () => shareToX(finalScore));
 
-            const restartBtn = this.add.text(225, 700, 'Tap to Restart', {
+            const titleBtn = this.add.text(225, 700, 'Tap to Title', {
                 fontSize: '24px',
                 fill: '#ffff00'
             })
@@ -658,12 +784,24 @@
                 .setInteractive()
                 .setDepth(2001);
 
-            restartBtn.on('pointerdown', () => this.scene.restart());
+            titleBtn.on('pointerdown', () => showTitleScreen.call(this));
 
-            this.add.text(225, 740, 'Produced by aoba724（あおぞら）', {
+            const credit = this.add.text(225, 740, 'Produced by aoba724（あおぞら）', {
                 fontSize: '14px',
                 fill: '#ffffff'
             }).setOrigin(0.5).setDepth(2001);
+
+            gameOverUI.push(
+                overlay,
+                goText,
+                scoreLine,
+                itemText,
+                rankingTitle,
+                rankingRegisterButton,
+                xBtn,
+                titleBtn,
+                credit
+            );
         }
 
         async function fetchRanking() {
@@ -700,7 +838,7 @@
                 ranking.forEach((item, i) => {
                     const safeName = String(item.name || 'Player').slice(0, 12);
                     const safeScore = Number(item.score || 0);
-                    addRankingLine.call(this, 225, 260 + (i * 24), `${i + 1}. ${safeName} - ${safeScore}m`, '#ffffff', 18);
+                    addRankingLine.call(this, 225, 260 + (i * 24), `${i + 1}. ${safeName} - ${formatScore(safeScore)}`, '#ffffff', 18);
                 });
 
             } catch (err) {
@@ -781,6 +919,7 @@
             }).setOrigin(0.5).setDepth(2001);
 
             rankingTexts.push(t);
+            gameOverUI.push(t);
         }
 
         function clearRankingTexts() {
@@ -790,15 +929,19 @@
             rankingTexts = [];
         }
 
+        function formatScore(value) {
+            return `$${Math.floor(value).toLocaleString('en-US')}`;
+        }
+
         function shareToX(fScore) {
             const totalScore = Math.floor(fScore);
             const itemsStr = `🍌x${itemCounts.banana} 🍇x${itemCounts.budo} 035x${itemCounts.cat035} 🌿x${itemCounts.hogo} 🪙x${itemCounts.shiro}`;
 
             const text = encodeURIComponent(
-                `$INMU runで${totalScore}m走破しました！
+                `$INMU runで${formatScore(totalScore)}獲得しました！
 Item ${itemsStr}
 
-TOTAL Score ${totalScore}m
+TOTAL Score ${formatScore(totalScore)}
 
 ゲームプレイはこちらから
 ${SERVER_URL}
