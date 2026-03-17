@@ -93,6 +93,7 @@
         let gameMode = 'title';
         let titleUI = [];
         let gameOverUI = [];
+        let resultScoreLabelText = null;
         let resultScoreText = null;
         let resultItemText = null;
 
@@ -188,7 +189,7 @@
             this.physics.add.overlap(player, items, collectItem, null, this);
             this.physics.add.overlap(player, coins, collectCoin, null, this);
 
-            this.input.on('pointerdown', (pointer) => {
+            this.input.on('pointerdown', () => {
                 if (gameMode === 'title') {
                     startGame.call(this);
                 } else if (gameMode === 'playing') {
@@ -403,6 +404,7 @@
                 if (obj) obj.destroy();
             });
             gameOverUI = [];
+            resultScoreLabelText = null;
             resultScoreText = null;
             resultItemText = null;
         }
@@ -721,8 +723,15 @@
                 .setDisplaySize(GAME_WIDTH, GAME_HEIGHT)
                 .setDepth(2000);
 
-            // 画像に合わせた表示位置
-            resultScoreText = this.add.text(225, 130, formatScore(finalScore), {
+            resultScoreLabelText = this.add.text(225, 120, 'TOTAL SCORE', {
+                fontSize: '20px',
+                fill: '#fff3c4',
+                stroke: '#000000',
+                strokeThickness: 5,
+                fontStyle: 'bold'
+            }).setOrigin(0.5).setDepth(2001);
+
+            resultScoreText = this.add.text(225, 154, formatScore(finalScore), {
                 fontSize: '32px',
                 fill: '#fff3c4',
                 stroke: '#000000',
@@ -730,15 +739,15 @@
                 fontStyle: 'bold'
             }).setOrigin(0.5).setDepth(2001);
 
-            resultItemText = this.add.text(225, 175, `🍌x${itemCounts.banana}  🍇x${itemCounts.budo}  035x${itemCounts.cat035}  🌿x${itemCounts.hogo}  🪙x${itemCounts.shiro}`, {
+            resultItemText = this.add.text(225, 195, `🍌x${itemCounts.banana}  🍇x${itemCounts.budo}  035x${itemCounts.cat035}  🌿x${itemCounts.hogo}  🪙x${itemCounts.shiro}`, {
                 fontSize: '16px',
                 fill: '#ffff00',
                 stroke: '#000000',
                 strokeThickness: 4
             }).setOrigin(0.5).setDepth(2001);
 
-            rankingLoadingText = this.add.text(225, 286, 'ランキング読込中...', {
-                fontSize: '18px',
+            rankingLoadingText = this.add.text(225, 280, 'ランキング読込中...', {
+                fontSize: '16px',
                 fill: '#ffffff',
                 stroke: '#000000',
                 strokeThickness: 4
@@ -746,8 +755,7 @@
 
             fetchRanking.call(this);
 
-            // 透明タップ領域
-            const registerHit = this.add.rectangle(225, 516, 230, 42, 0xffffff, 0.001)
+            const registerHit = this.add.rectangle(225, 515, 230, 42, 0xffffff, 0.001)
                 .setInteractive()
                 .setDepth(2002);
 
@@ -758,13 +766,13 @@
 
             rankingRegisterButton = registerHit;
 
-            const xShareHit = this.add.rectangle(225, 582, 230, 42, 0xffffff, 0.001)
+            const xShareHit = this.add.rectangle(225, 575, 230, 42, 0xffffff, 0.001)
                 .setInteractive()
                 .setDepth(2002);
 
             xShareHit.on('pointerdown', () => shareToX(finalScore));
 
-            const titleHit = this.add.rectangle(225, 672, 220, 40, 0xffffff, 0.001)
+            const titleHit = this.add.rectangle(225, 660, 220, 40, 0xffffff, 0.001)
                 .setInteractive()
                 .setDepth(2002);
 
@@ -772,6 +780,7 @@
 
             gameOverUI.push(
                 resultBg,
+                resultScoreLabelText,
                 resultScoreText,
                 resultItemText,
                 registerHit,
@@ -800,14 +809,14 @@
                 }
 
                 if (!data.ok) {
-                    addRankingLine.call(this, 225, 286, 'ランキング取得失敗', '#ff8080');
+                    addRankingLine.call(this, 225, 280, 'ランキング取得失敗', '#ff8080');
                     return;
                 }
 
                 const ranking = Array.isArray(data.ranking) ? data.ranking.slice(0, 10) : [];
 
                 if (ranking.length === 0) {
-                    addRankingLine.call(this, 225, 286, 'まだランキングはありません', '#ffffff');
+                    addRankingLine.call(this, 225, 280, 'まだランキングはありません', '#ffffff');
                     return;
                 }
 
@@ -817,10 +826,10 @@
                     addRankingLine.call(
                         this,
                         225,
-                        286 + (i * 24),
+                        280 + (i * 20),
                         `${i + 1}. ${safeName} - ${formatScore(safeScore)}`,
                         '#ffffff',
-                        18
+                        15
                     );
                 });
 
@@ -832,7 +841,7 @@
                     rankingLoadingText = null;
                 }
                 clearRankingTexts();
-                addRankingLine.call(this, 225, 286, 'ランキング通信エラー', '#ff8080');
+                addRankingLine.call(this, 225, 280, 'ランキング通信エラー', '#ff8080');
                 console.error('fetchRanking error:', err);
             }
         }
@@ -875,8 +884,8 @@
 
                     alert("ランキングに送信しました！");
 
-                    rankingLoadingText = this.add.text(225, 286, 'ランキング更新中...', {
-                        fontSize: '18px',
+                    rankingLoadingText = this.add.text(225, 280, 'ランキング更新中...', {
+                        fontSize: '16px',
                         fill: '#ffffff',
                         stroke: '#000000',
                         strokeThickness: 4
