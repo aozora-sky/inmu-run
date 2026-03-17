@@ -89,6 +89,11 @@
         let hasSubmittedRanking = false;
         let rankingRegisterButton = null;
         let rankingRequestId = 0;
+        let rankingData = [];
+        let rankingPage = 0;
+        let rankingPrevButton = null;
+        let rankingNextButton = null;
+        let rankingPageText = null;
 
         let gameMode = 'title';
         let titleUI = [];
@@ -284,6 +289,11 @@
             isSubmittingRanking = false;
             hasSubmittedRanking = false;
             rankingRegisterButton = null;
+            rankingData = [];
+            rankingPage = 0;
+            rankingPrevButton = null;
+            rankingNextButton = null;
+            rankingPageText = null;
 
             itemCounts = { banana: 0, budo: 0, cat035: 0, hogo: 0, shiro: 0 };
             timerBanana = null;
@@ -405,6 +415,9 @@
             gameOverUI = [];
             resultScoreText = null;
             resultItemText = null;
+            rankingPrevButton = null;
+            rankingNextButton = null;
+            rankingPageText = null;
         }
 
         function update() {
@@ -743,6 +756,42 @@
                 strokeThickness: 4
             }).setOrigin(0.5).setDepth(2001);
 
+            rankingPrevButton = this.add.text(175, 492, '◀', {
+                fontSize: '20px',
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }).setOrigin(0.5).setDepth(2001).setInteractive();
+
+            rankingNextButton = this.add.text(275, 492, '▶', {
+                fontSize: '20px',
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }).setOrigin(0.5).setDepth(2001).setInteractive();
+
+            rankingPageText = this.add.text(225, 492, '1 / 1', {
+                fontSize: '14px',
+                fill: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 4
+            }).setOrigin(0.5).setDepth(2001);
+
+            rankingPrevButton.on('pointerdown', () => {
+                if (rankingPage > 0) {
+                    rankingPage--;
+                    renderRankingPage.call(this);
+                }
+            });
+
+            rankingNextButton.on('pointerdown', () => {
+                const maxPage = Math.max(0, Math.ceil(rankingData.length / 10) - 1);
+                if (rankingPage < maxPage) {
+                    rankingPage++;
+                    renderRankingPage.call(this);
+                }
+            });
+
             fetchRanking.call(this);
 
             const registerHit = this.add.rectangle(225, 515, 230, 42, 0xffffff, 0.001)
@@ -772,6 +821,9 @@
                 resultBg,
                 resultScoreText,
                 resultItemText,
+                rankingPrevButton,
+                rankingNextButton,
+                rankingPageText,
                 registerHit,
                 xShareHit,
                 titleHit
@@ -798,29 +850,21 @@
                 }
 
                 if (!data.ok) {
-                    addRankingLine.call(this, 225, 280, 'ランキング取得失敗', '#ff8080');
+                    addRankingLine.call(this, 225, 285, 'ランキング取得失敗', '#ff8080');
+                    updateRankingPager.call(this);
                     return;
                 }
 
-                const ranking = Array.isArray(data.ranking) ? data.ranking.slice(0, 10) : [];
+                rankingData = Array.isArray(data.ranking) ? data.ranking.slice(0, 30) : [];
+                rankingPage = 0;
 
-                if (ranking.length === 0) {
-                    addRankingLine.call(this, 225, 280, 'まだランキングはありません', '#ffffff');
+                if (rankingData.length === 0) {
+                    addRankingLine.call(this, 225, 285, 'まだランキングはありません', '#ffffff');
+                    updateRankingPager.call(this);
                     return;
                 }
 
-                ranking.forEach((item, i) => {
-                    const safeName = String(item.name || 'Player').slice(0, 12);
-                    const safeScore = Number(item.score || 0);
-                    addRankingLine.call(
-                        this,
-                        225,
-                        280 + (i * 20),
-                        `${i + 1}. ${safeName} - ${formatScore(safeScore)}`,
-                        '#ffffff',
-                        15
-                    );
-                });
+                renderRankingPage.call(this);
 
             } catch (err) {
                 if (!isGameOver || requestId !== rankingRequestId) return;
@@ -830,8 +874,54 @@
                     rankingLoadingText = null;
                 }
                 clearRankingTexts();
-                addRankingLine.call(this, 225, 280, 'ランキング通信エラー', '#ff8080');
+                addRankingLine.call(this, 225, 285, 'ランキング通信エラー', '#ff8080');
+                updateRankingPager.call(this);
                 console.error('fetchRanking error:', err);
+            }
+        }
+
+        function renderRankingPage() {
+            clearRankingTexts();
+
+            if (!rankingData || rankingData.length === 0) {
+                addRankingLine.call(this, 225, 285, 'まだランキングはありません', '#ffffff');
+                updateRankingPager.call(this);
+                return;
+            }
+
+            const start = rankingPage * 10;
+            const end = start + 10;
+            const pageItems = rankingData.slice(start, end);
+
+            pageItems.forEach((item, i) => {
+                const safeName = String(item.name || 'Player').slice(0, 12);
+                const safeScore = Number(item.score || 0);
+                addRankingLine.call(
+                    this,
+                    225,
+                    285 + (i * 20),
+                    `${start + i + 1}. ${safeName} - ${formatScore(safeScore)}`,
+                    '#ffffff',
+                    15
+                );
+            });
+
+            updateRankingPager.call(this);
+        }
+
+        function updateRankingPager() {
+            const totalPages = Math.max(1, Math.ceil((rankingData ? rankingData.length : 0) / 10));
+
+            if (rankingPageText) {
+                rankingPageText.setText(`${rankingPage + 1} / ${totalPages}`);
+            }
+
+            if (rankingPrevButton) {
+                rankingPrevButton.setAlpha(rankingPage > 0 ? 1 : 0.35);
+            }
+
+            if (rankingNextButton) {
+                rankingNextButton.setAlpha(rankingPage < totalPages - 1 ? 1 : 0.35);
             }
         }
 
@@ -873,7 +963,7 @@
 
                     alert("ランキングに送信しました！");
 
-                    rankingLoadingText = this.add.text(225, 280, 'ランキング更新中...', {
+                    rankingLoadingText = this.add.text(225, 285, 'ランキング更新中...', {
                         fontSize: '16px',
                         fill: '#ffffff',
                         stroke: '#000000',
