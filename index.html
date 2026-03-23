@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+    <!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8" />
@@ -1018,19 +1018,29 @@
             const totalScore = Math.floor(fScore);
             const itemsStr = `🍌x${itemCounts.banana} 🍇x${itemCounts.budo} 035x${itemCounts.cat035} 🌿x${itemCounts.hogo} 🪙x${itemCounts.shiro}`;
 
-            const text = encodeURIComponent(
-                `$INMU runで${formatScore(totalScore)}獲得しました！
-Item ${itemsStr}
+            const shareText =
+                `$INMU runで${formatScore(totalScore)}獲得しました！\n` +
+                `Item ${itemsStr}\n\n` +
+                `TOTAL Score ${formatScore(totalScore)}\n\n` +
+                `ゲームプレイはこちらから\n` +
+                `${SERVER_URL}\n\n` +
+                `#InmuRun $INMU #035HP`;
 
-TOTAL Score ${formatScore(totalScore)}
+            const encodedText = encodeURIComponent(shareText);
 
-ゲームプレイはこちらから
-${SERVER_URL}
+            // まずは x.com を同一タブで開く
+            const shareUrl = `https://x.com/intent/post?text=${encodedText}`;
 
-#InmuRun $INMU #035HP`
-            );
-
-            window.open(`https://twitter.com/intent/tweet?text=${text}`, '_blank');
+            try {
+                window.location.href = shareUrl;
+            } catch (e) {
+                try {
+                    location.assign(shareUrl);
+                } catch (err) {
+                    // 最終フォールバック
+                    alert("X共有を開けませんでした。以下の文面をコピーして投稿してください。\n\n" + shareText);
+                }
+            }
         }
     </script>
 </body>
