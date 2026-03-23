@@ -799,7 +799,7 @@
 
             fetchRanking.call(this);
 
-            const registerHit = this.add.rectangle(360, 790, 250, 45, 0xffffff, 0.001)
+            const registerHit = this.add.rectangle(225, 515, 250, 45, 0xffffff, 0.001)
                 .setInteractive()
                 .setDepth(2002);
 
@@ -810,13 +810,13 @@
 
             rankingRegisterButton = registerHit;
 
-            const xShareHit = this.add.rectangle(360, 865, 250, 45, 0xffffff, 0.001)
+            const xShareHit = this.add.rectangle(225, 555, 250, 45, 0xffffff, 0.001)
                 .setInteractive()
                 .setDepth(2002);
 
             xShareHit.on('pointerdown', () => shareToX(finalScore));
 
-            const titleHit = this.add.rectangle(360, 975, 250, 45, 0xffffff, 0.001)
+            const titleHit = this.add.rectangle(225, 625, 250, 45, 0xffffff, 0.001)
                 .setInteractive()
                 .setDepth(2002);
 
